@@ -1,7 +1,13 @@
 from multiprocessing import Process, Manager
 import time, random
-from threading import Lock, Thread
+from threading import Lock, Thread, Timer
 
+
+def every_second():
+  global fruit_tree, dirty_fruit, clean_fruit_lst,anchor
+  anchor = Timer(1.0, every_second)
+  anchor.start()
+  print(f" Tree({len(fruit_tree)}) - dirty basket({len(dirty_fruit)}) - Clean Basket({len(clean_fruit_lst)})")
 
 def pop_element_pick(fruit_tree, lock):
         
@@ -11,7 +17,7 @@ def pop_element_pick(fruit_tree, lock):
             if len(fruit_tree) > 0:
                 time.sleep(random.randint(3,6))
                 fruit = fruit_tree.pop()
-                print('Popped element: {}'.format(fruit))
+
                 dirty_fruit.append(fruit)
             pop_element_pick(fruit_tree, lock)
         except:
@@ -35,7 +41,7 @@ def plug_fruit_from_tree(fruit_tree,dirty_fruit,clean_fruit_lst):
     thread1.join()
     thread2.join()
     thread3.join()
-    print(dirty_fruit)
+    
 
 def clean_fruit(dirty_fruit,clean_fruit_lst,fruit_tree):
     
@@ -47,7 +53,7 @@ def clean_fruit(dirty_fruit,clean_fruit_lst,fruit_tree):
                 time.sleep(random.randint(2,4))
                 try:
                     fruit_1 = dirty_fruit.pop()
-                    print('cleaned element: {}'.format(fruit_1))
+
                     clean_fruit_lst.append(fruit_1)
                 except:
                     pass
@@ -71,6 +77,7 @@ if __name__ == '__main__':
     length_of_fruit_tree = len(fruit_tree)
     dirty_fruit = manager.list()
     clean_fruit_lst = manager.list()
+    every_second()
     p1 = Process(target=plug_fruit_from_tree,args=(fruit_tree,dirty_fruit,clean_fruit_lst))
     p2 = Process(target=clean_fruit, args=(dirty_fruit,clean_fruit_lst,fruit_tree))
     p1.start()
@@ -78,6 +85,7 @@ if __name__ == '__main__':
 
     p1.join()
     p2.join()
-    print(dirty_fruit)
+    anchor.cancel()
+    # print(dirty_fruit)
     print('Number of fruit on tree',length_of_fruit_tree)
     print('Number of fruit in clean basket',len(clean_fruit_lst))
