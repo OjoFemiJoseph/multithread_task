@@ -1,91 +1,103 @@
 from multiprocessing import Process, Manager
 import time, random
-from threading import Lock, Thread, Timer
+from threading import Lock, Thread
+
+import threading
+import logging
+
+logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 
-def every_second():
-  global fruit_tree, dirty_fruit, clean_fruit_lst,anchor
-  anchor = Timer(1.0, every_second)
-  anchor.start()
-  print(f" Tree({len(fruit_tree)}) - dirty basket({len(dirty_fruit)}) - Clean Basket({len(clean_fruit_lst)})")
+class FruitProcessor:
 
-def pop_element_pick(fruit_tree, lock):
+
+    def __init__(self):
+        manager= Manager()
+        self.fruit_tree=manager.list(range(1,51))
+
+        self.length_of_fruit_tree = len(self.fruit_tree)
+        self.dirty_fruit = manager.list()
+        self.clean_fruit_lst = manager.list()
+
+    def pop_element_pick(self):
         
-    if len(fruit_tree) > 0:
-        # with lock:
-        try:
-            if len(fruit_tree) > 0:
-                time.sleep(random.randint(3,6))
-                fruit = fruit_tree.pop()
+        if len(self.fruit_tree) > 0:
+            
+            try:
+                if len(self.fruit_tree) > 0:
+                    time.sleep(random.randint(3,6))
+                    fruit = self.fruit_tree.pop()
 
-                dirty_fruit.append(fruit)
-            pop_element_pick(fruit_tree, lock)
-        except:
+                    self.dirty_fruit.append(fruit)
+                
+                self.pop_element_pick()
+            except:
+                pass
+        else:
             pass
-    else:
-        print("List is empty")
+            # print("List is empty")
 
-def plug_fruit_from_tree(fruit_tree,dirty_fruit,clean_fruit_lst):
+    def plug_fruit_from_tree(self):
     
 
-    lock = Lock()
-    
-    thread1 = Thread(target=pop_element_pick, args=(fruit_tree, lock))
-    thread2 = Thread(target=pop_element_pick, args=(fruit_tree, lock))
-    thread3 = Thread(target=pop_element_pick, args=(fruit_tree, lock))
-    thread1.start()
-    thread2.start()
-    thread3.start()
+        thread1 = Thread(target=self.pop_element_pick)
+        thread2 = Thread(target=self.pop_element_pick)
+        thread3 = Thread(target=self.pop_element_pick)
+        thread1.start()
+        thread2.start()
+        thread3.start()
 
-    
-    thread1.join()
-    thread2.join()
-    thread3.join()
-    
+        
+        thread1.join()
+        thread2.join()
+        thread3.join()
 
-def clean_fruit(dirty_fruit,clean_fruit_lst,fruit_tree):
-    
-    def pop_element():
-        while len(dirty_fruit) > 0 or len(fruit_tree) > 0:
-            # print('i ran',len(dirty_fruit),len(fruit_tree),len(clean_fruit_lst))
+    def pop_element(self):
+        while len(self.dirty_fruit) > 0 or len(self.fruit_tree) > 0:
 
-            if len(dirty_fruit) > 0:
+            if len(self.dirty_fruit) > 0:
                 time.sleep(random.randint(2,4))
                 try:
-                    fruit_1 = dirty_fruit.pop()
+                    fruit_1 = self.dirty_fruit.pop()
 
-                    clean_fruit_lst.append(fruit_1)
+                    self.clean_fruit_lst.append(fruit_1)
                 except:
                     pass
 
-    thread1 = Thread(target=pop_element)
-    thread2 = Thread(target=pop_element)
-    thread3 = Thread(target=pop_element)
-    thread1.start()
-    thread2.start()
-    thread3.start()
+    def clean_fruit(self):
+        
+       
 
-    thread1.join()
-    thread2.join()
-    thread3.join()
+        thread1 = Thread(target=self.pop_element)
+        thread2 = Thread(target=self.pop_element)
+        thread3 = Thread(target=self.pop_element)
+        thread1.start()
+        thread2.start()
+        thread3.start()
+
+        thread1.join()
+        thread2.join()
+        thread3.join()
+    
+    def every_second(self):
+        
+        self.anchor = threading.Timer(1.0, self.every_second)
+        self.anchor.start()
+        logging.info(f" Tree({len(self.fruit_tree)}) - dirty basket({len(self.dirty_fruit)}) - Clean Basket({len(self.clean_fruit_lst)})")
+
+    def start(self):
+        self.every_second()
+        p1 = Process(target=self.plug_fruit_from_tree)
+        p2 = Process(target=self.clean_fruit)
+        p1.start()
+        p2.start()
+
+        p1.join()
+        p2.join()
+        self.anchor.cancel()
+
 
 if __name__ == '__main__':
-    
-    manager= Manager()
-    fruit_tree=manager.list(range(1,51))
-
-    length_of_fruit_tree = len(fruit_tree)
-    dirty_fruit = manager.list()
-    clean_fruit_lst = manager.list()
-    every_second()
-    p1 = Process(target=plug_fruit_from_tree,args=(fruit_tree,dirty_fruit,clean_fruit_lst))
-    p2 = Process(target=clean_fruit, args=(dirty_fruit,clean_fruit_lst,fruit_tree))
-    p1.start()
-    p2.start()
-
-    p1.join()
-    p2.join()
-    anchor.cancel()
-    # print(dirty_fruit)
-    print('Number of fruit on tree',length_of_fruit_tree)
-    print('Number of fruit in clean basket',len(clean_fruit_lst))
+    picker = FruitProcessor()
+    picker.start()
